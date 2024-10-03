@@ -2,33 +2,53 @@
 #include <vector>
 #include <string>
 #include <set>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
 
 using namespace std;
 
 struct Media {
     string title;
     string genre;
+    float imdbScore;
 };
 
-void addMedia(vector<Media>& library, string title, string genre) {
-    library.push_back({title, genre});
+void readMoviesFromFile(vector<Media>& library, const string& filePath) {
+    ifstream file(filePath);
+    string line;
+
+    while (getline(file, line)) {
+        stringstream ss(line);
+        string title, genre, scoreStr;
+        float imdbScore;
+
+        getline(ss, title, ',');
+        getline(ss, genre, ',');
+        getline(ss, scoreStr);
+
+        imdbScore = stof(scoreStr);
+        library.push_back({title, genre, imdbScore});
+    }
 }
 
-void addPreferredGenre(set<string>& preferredGenres, string genre) {
+void addPreferredGenre(set<string>& preferredGenres, const string& genre) {
     preferredGenres.insert(genre);
 }
 
-bool isPreferredGenre(set<string>& preferredGenres, string genre) {
-    return preferredGenres.count(genre) > 0;
-}
+vector<Media> recommendMovies(set<string>& preferredGenres, vector<Media>& library) {
+    vector<Media> recommendations;
 
-vector<string> recommend(set<string>& preferredGenres, vector<Media>& library) {
-    vector<string> recommendations;
-    for (int i = 0; i < library.size(); i++) {
-        if (isPreferredGenre(preferredGenres, library[i].genre)) {
-            recommendations.push_back(library[i].title);
+    for (const auto& media : library) {
+        if (preferredGenres.count(media.genre) > 0) {
+            recommendations.push_back(media);
         }
     }
+
+    sort(recommendations.begin(), recommendations.end(), [](const Media& a, const Media& b) {
+        return a.imdbScore > b.imdbScore;
+    });
+
     return recommendations;
 }
 
@@ -36,18 +56,16 @@ int main() {
     vector<Media> library;
     set<string> preferredGenres;
 
-    addMedia(library, "Inception", "Sci-Fi");
-    addMedia(library, "The Matrix", "Sci-Fi");
-    addMedia(library, "Friends", "Comedy");
+    readMoviesFromFile(library, "C:\\Users\\Agrim Singh\\Downloads\\extended_movies.txt");
 
     addPreferredGenre(preferredGenres, "Sci-Fi");
     addPreferredGenre(preferredGenres, "Comedy");
 
-    vector<string> recommendations = recommend(preferredGenres, library);
+    vector<Media> recommendations = recommendMovies(preferredGenres, library);
 
     cout << "Recommended movies and TV series:" << endl;
-    for (int i = 0; i < recommendations.size(); i++) {
-        cout << recommendations[i] << endl;
+    for (const auto& media : recommendations) {
+        cout << media.title << " (" << media.genre << ") - IMDB Score: " << media.imdbScore << endl;
     }
 
     return 0;
